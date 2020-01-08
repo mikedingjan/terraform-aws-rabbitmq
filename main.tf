@@ -5,17 +5,29 @@ data "aws_vpc" "vpc" {
 data "aws_region" "current" {
 }
 
-data "aws_ami_ids" "ami" {
-  owners = ["amazon"]
+
+data "aws_ami" "ami" {
+  most_recent = true
+  owners      = ["amazon"]
 
   filter {
     name   = "name"
-    values = ["amzn-ami-hvm-2017*-gp2"]
+    values = ["amzn2-ami-hvm-*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
   }
 }
 
 locals {
-  cluster_name = "rabbitmq-${var.name}"
+  cluster_name = "${var.name}-rabbitmq"
 }
 
 resource "random_string" "admin_password" {
@@ -39,7 +51,7 @@ data "aws_iam_policy_document" "policy_doc" {
 
     principals {
       type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
+      identifiers = ["ec2.amazonaws.com", "ssm.amazonaws.com"]
     }
   }
 }
@@ -61,6 +73,11 @@ data "template_file" "cloud-init" {
 resource "aws_iam_role" "role" {
   name               = local.cluster_name
   assume_role_policy = data.aws_iam_policy_document.policy_doc.json
+}
+
+resource "aws_iam_role_policy_attachment" "role__ssm_policy" {
+  role       = aws_iam_role.role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_iam_role_policy" "policy" {
@@ -151,10 +168,9 @@ resource "aws_security_group" "rabbitmq_nodes" {
 }
 
 resource "aws_launch_configuration" "rabbitmq" {
-  name                 = local.cluster_name
-  image_id             = data.aws_ami_ids.ami.ids[0]
+  name_prefix          = "${local.cluster_name}-"
+  image_id             = data.aws_ami.ami.id
   instance_type        = var.instance_type
-  key_name             = var.ssh_key_name
   security_groups      = concat([aws_security_group.rabbitmq_nodes.id], var.nodes_additional_security_group_ids)
   iam_instance_profile = aws_iam_instance_profile.profile.id
   user_data            = data.template_file.cloud-init.rendered

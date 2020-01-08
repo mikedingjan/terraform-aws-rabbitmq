@@ -1,12 +1,7 @@
 variable "vpc_id" {
 }
 
-variable "ssh_key_name" {
-}
-
-variable "name" {
-  default = "main"
-}
+variable "name" {}
 
 variable "min_size" {
   description = "Minimum number of RabbitMQ nodes"
@@ -53,4 +48,3 @@ variable "instance_volume_size" {
 variable "instance_volume_iops" {
   default = "0"
 }
-

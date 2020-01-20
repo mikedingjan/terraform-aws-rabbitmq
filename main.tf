@@ -110,7 +110,7 @@ resource "aws_iam_instance_profile" "profile" {
 }
 
 resource "aws_security_group" "rabbitmq_elb" {
-  name        = "rabbitmq_elb-${var.name}"
+  name        = "${local.cluster_name}-rabbitmq-elb"
   vpc_id      = var.vpc_id
   description = "Security Group for the rabbitmq elb"
 
@@ -207,7 +207,7 @@ resource "aws_autoscaling_group" "rabbitmq" {
 }
 
 resource "aws_elb" "elb" {
-  name = "${local.cluster_name}-elb"
+  name = "${local.cluster_name}"
 
   listener {
     instance_port     = 5672

@@ -17,3 +17,7 @@ output "secret_cookie" {
   sensitive = true
 }
 
+
+output "rabbitmq_management_dns_name" {
+  value = aws_elb.elb_management.dns_name
+}

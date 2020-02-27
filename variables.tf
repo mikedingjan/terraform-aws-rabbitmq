@@ -23,6 +23,11 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
+variable "public_subnet_ids" {
+  description = "Subnets for RabbitMQ mangement"
+  type        = list(string)
+}
+
 variable "nodes_additional_security_group_ids" {
   type    = list(string)
   default = []

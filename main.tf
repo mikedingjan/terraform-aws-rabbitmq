@@ -110,7 +110,7 @@ resource "aws_iam_instance_profile" "profile" {
 }
 
 resource "aws_security_group" "rabbitmq_elb" {
-  name        = "${local.cluster_name}-rabbitmq-elb"
+  name        = "${local.cluster_name}-loadbalancer"
   vpc_id      = var.vpc_id
   description = "Security Group for the rabbitmq elb"
 
@@ -196,7 +196,7 @@ resource "aws_autoscaling_group" "rabbitmq" {
   health_check_type         = "ELB"
   force_delete              = true
   launch_configuration      = aws_launch_configuration.rabbitmq.name
-  load_balancers            = [aws_elb.elb.name]
+  load_balancers            = [aws_elb.elb.name, aws_elb.elb_management.name]
   vpc_zone_identifier       = var.subnet_ids
 
   tag {
@@ -216,6 +216,34 @@ resource "aws_elb" "elb" {
     lb_protocol       = "tcp"
   }
 
+  # listener {
+  #   instance_port     = 15672
+  #   instance_protocol = "http"
+  #   lb_port           = 80
+  #   lb_protocol       = "http"
+  # }
+
+  health_check {
+    interval            = 30
+    unhealthy_threshold = 10
+    healthy_threshold   = 2
+    timeout             = 3
+    target              = "TCP:5672"
+  }
+
+  subnets         = var.subnet_ids
+  idle_timeout    = 3600
+  internal        = true
+  security_groups = concat([aws_security_group.rabbitmq_elb.id], var.elb_additional_security_group_ids)
+
+  tags = {
+    Name = local.cluster_name
+  }
+}
+
+resource "aws_elb" "elb_management" {
+  name = "${local.cluster_name}-management"
+
   listener {
     instance_port     = 15672
     instance_protocol = "http"
@@ -231,9 +259,9 @@ resource "aws_elb" "elb" {
     target              = "TCP:5672"
   }
 
-  subnets         = var.subnet_ids
+  subnets         = var.public_subnet_ids
   idle_timeout    = 3600
-  internal        = true
+  internal        = false
   security_groups = concat([aws_security_group.rabbitmq_elb.id], var.elb_additional_security_group_ids)
 
   tags = {
